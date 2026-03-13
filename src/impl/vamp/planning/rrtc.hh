@@ -129,9 +129,17 @@ namespace vamp::planning
 
                 auto nearest_vector = temp - nearest_configuration;
 
-                bool reach = nearest_distance < settings.range;
+                // Use robot-specific distance metric for steering if provided (e.g., TDT cost)
+                const float metric_distance = [&]() -> float {
+                    if constexpr (has_robot_distance<Robot>::value)
+                        return Robot::distance(nearest_configuration, temp);
+                    else
+                        return nearest_distance;
+                }();
+
+                bool reach = metric_distance < settings.range;
                 auto extension_vector =
-                    (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
+                    (reach) ? nearest_vector : nearest_vector * (settings.range / metric_distance);
 
                 if (validate_vector<Robot, rake, resolution>(
                         nearest_configuration,
